@@ -19,7 +19,7 @@ const startApolloServer = async (app, httpServer) => {
   // DB set-up
   mongoose.Promise = global.Promise;
 
-  const connection = mongoose.connect(process.env.DB_LOCAL, {
+  const connection = mongoose.connect(process.env.DB, {
     useNewUrlParser: true,
   });
 
