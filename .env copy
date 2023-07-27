@@ -1,0 +1,8 @@
+DB="mongodb+srv://kinut:Polarine001@cluster0.ihigr.mongodb.net/elektronics"
+COURIER_AUTH_TOKEN="pk_prod_XJ59DJKFM34ZM9PSFF053QYM8DCA"
+CLOUDINARY_CLOUD_NAME="dxjhcfinq"
+CLOUDINARY_API_KEY="292858742431259"
+CLOUDINARY_API_SECRET="os1QzAVfEfifsaRgMvsXEfXlPws"
+
+
+
