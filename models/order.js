@@ -10,9 +10,10 @@ export const OrderSchema = new Schema(
         product: { type: Schema.Types.ObjectId, ref: "Product" },
         salePrice: Number,
         quantity: Number,
+        variant: String,
       },
     ],
-    customer: { type: Schema.Types.ObjectId, ref: "Customer" },
+    customer: { type: Schema.Types.ObjectId, ref: "User" },
     deliveryLocation: {
       lat: Number,
       lng: Number,
@@ -20,7 +21,6 @@ export const OrderSchema = new Schema(
     payment: {
       code: String,
       timestamp: String,
-      name: String,
       amount: Number,
     },
     deliveryTimestamp: String,

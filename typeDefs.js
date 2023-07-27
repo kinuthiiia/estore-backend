@@ -6,6 +6,7 @@ type Admin {
     name: String
     phoneNumber: String
     levelClearance: String
+    removed: Boolean
     createdAt: String
 }
 
@@ -61,10 +62,12 @@ type Variant {
 }
 
 type Order {
+    id: ID
     items: [OrderItem]
     customer: User
     deliveryLocation: DeliveryLocation
     payment: Payment
+    createdAt: String
     deliveryTimestamp: String
     dispatchTimestamp: String
     pickUpTimestamp: String
@@ -72,6 +75,7 @@ type Order {
 
 type OrderItem {
     product: Product
+    variant: String
     salePrice: Int
     quantity: Int
 }
@@ -83,8 +87,7 @@ type DeliveryLocation {
 
 type Payment {
     code: String
-    timestamp: String
-    name: String
+    timestamp: String 
     amount: Int
 }
 
@@ -109,11 +112,39 @@ type Section {
 }
 
 
+type StatPage {
+    totalSales: Int
+    totalOrders: Int
+    totalProducts: Int
+    chartData: [ChartData]
+    fastestMoving: [MovingProduct]
+    slowestMoving: [MovingProduct]
+}
+
+type ChartData {
+    label: String
+    value: Int
+}
+
+type MovingProduct{
+    product: Product
+    ordersPerMonth: Int
+}
+
+
 type Query { 
     getProducts: [Product]
     getAdmins: [Admin]
     getProduct(id: ID): Product
-    getUser(email: String): User    
+    getUser(email: String): User  
+    getOrders(customer: String): [Order]  
+    getAllOrders: [Order]
+    getAdmin(
+        email: String
+        id: ID
+        password: String
+    ): Admin
+    getStatPage: StatPage
 }
 
 type Mutation {
@@ -129,7 +160,7 @@ type Mutation {
         email: String
         name: String
         levelClearance: String
-    ) : Admin
+    ) : Admin    
     addToCart(
         customer: String
         product: ID
@@ -162,6 +193,24 @@ type Mutation {
         email: String
         default: Boolean
     ) : User
+    checkout(
+        items: String
+        customer: ID
+        payment: String
+        _deliveryLocation: String
+    ): User
+    updateOrder(
+        action: String
+        id: ID
+    ): Order
+    updateAdmin(
+        id: ID
+        name: String
+        phoneNumber: String
+        email: String
+        password: String
+        removed: Boolean
+    ): Admin
 }
 
 `;

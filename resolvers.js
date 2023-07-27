@@ -1,9 +1,12 @@
 import { Admin, User, Order, Product, Section } from "./models/index.js";
 import cloudinary from "cloudinary";
+import { CourierClient } from "@trycourier/courier";
+import dotenv from "dotenv";
+dotenv.config();
 
-function getUnique(value, index, array) {
-  return self.indexOf(value) === index;
-}
+const courier = CourierClient({
+  authorizationToken: process.env.COURIER_AUTH_TOKEN,
+});
 
 function omit(obj, ...props) {
   const result = { ...obj };
@@ -14,9 +17,9 @@ function omit(obj, ...props) {
 }
 
 cloudinary.v2.config({
-  cloud_name: "dxjhcfinq",
-  api_key: "292858742431259",
-  api_secret: "os1QzAVfEfifsaRgMvsXEfXlPws",
+  cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
+  api_key: process.env.CLOUDINARY_API_KEY,
+  api_secret: process.env.CLOUDINARY_API_SECRET,
 });
 
 const resolvers = {
@@ -41,6 +44,27 @@ const resolvers = {
     },
   },
 
+  Order: {
+    items: async (parent, args) => {
+      let _items = [];
+
+      let orderItems = parent?.items;
+
+      for (let item of orderItems) {
+        let _populated = {
+          product: await Product.findById(item?.product),
+          quantity: item?.quantity,
+          variant: item?.variant,
+          salePrice: item?.salePrice,
+        };
+
+        _items.push(_populated);
+      }
+
+      return _items;
+    },
+  },
+
   Query: {
     getProducts: async () => {
       const products = await Product.find();
@@ -48,7 +72,7 @@ const resolvers = {
     },
 
     getAdmins: async () => {
-      let admins = await Admin.find();
+      let admins = await Admin.find({ removed: false });
       return admins;
     },
 
@@ -60,6 +84,162 @@ const resolvers = {
     getUser: async (_, { email }) => {
       let user = await User.findOne({ email }).populate("saved");
       return user;
+    },
+
+    getOrders: async (_, { customer }) => {
+      const orders = await Order.find({ customer });
+      return orders;
+    },
+
+    getAllOrders: async (_, args) => {
+      const orders = await Order.find().populate("customer");
+      return orders;
+    },
+
+    getAdmin: async (_, args) => {
+      const { id, email, password } = args;
+
+      let admin;
+
+      if (id) {
+        admin = await Admin.findById(id);
+        return admin;
+      }
+
+      admin = await Admin.findOne({ email, password, removed: false });
+      return admin;
+    },
+
+    getStatPage: async () => {
+      let statPage = {
+        totalSales: null,
+        totalOrders: null,
+        totalProducts: null,
+        chartData: [],
+        fastestMoving: [],
+        slowestMoving: [],
+      };
+
+      await Order.find({
+        deliveryTimestamp: { $ne: null },
+        dispatchTimestamp: { $ne: null },
+      }).then(async (docs, err) => {
+        statPage["totalOrders"] = docs?.length;
+
+        let orderWorths = [];
+
+        for (let doc of docs) {
+          let { items } = doc;
+          let orderWorth = 0;
+          items.map((item) => {
+            orderWorth = orderWorth + item?.salePrice * item?.quantity;
+          });
+          orderWorths.push(orderWorth);
+        }
+
+        statPage["totalSales"] = orderWorths.reduce(
+          (sum, orderWorth) => sum + orderWorth
+        );
+
+        statPage["totalProducts"] = (await Product.find()).length;
+
+        let last30Days = new Date();
+        last30Days.setDate(last30Days.getDate() - 30);
+
+        const orders = await Order.find({
+          createdAt: { $gte: last30Days },
+          deliveryTimestamp: { $ne: null },
+          dispatchTimestamp: { $ne: null },
+        }).exec();
+
+        let productOrdersCount = {};
+
+        orders.forEach((order) => {
+          order.items.forEach((item) => {
+            const productId = item?.product?.toString(); // Assuming 'item.product' is a reference to the Product collection
+            if (productOrdersCount[productId]) {
+              productOrdersCount[productId]++;
+            } else {
+              productOrdersCount[productId] = 1;
+            }
+          });
+        });
+
+        const sortedProductsFast = Object.entries(productOrdersCount).sort(
+          (a, b) => b[1] - a[1]
+        );
+
+        const sortedProductsSlow = Object.entries(productOrdersCount).sort(
+          (a, b) => a[1] - b[1]
+        );
+
+        const fastestMovingProducts = await Promise.all(
+          sortedProductsFast.map(async ([productId, orders_per_month]) => {
+            const product = await Product.findById(productId).exec();
+            return { product: product, ordersPerMonth: orders_per_month };
+          })
+        );
+
+        const slowestMovingProducts = await Promise.all(
+          sortedProductsSlow.map(async ([productId, orders_per_month]) => {
+            const product = await Product.findById(productId).exec();
+            return { product: product, ordersPerMonth: orders_per_month };
+          })
+        );
+
+        statPage["fastestMoving"] = fastestMovingProducts;
+
+        statPage["slowestMoving"] = slowestMovingProducts;
+
+        let sixMonthsAgo = new Date();
+        sixMonthsAgo.setMonth(sixMonthsAgo.getMonth() - 5);
+
+        // Query the Order collection to get orders made within the last 6 months
+        const _orders = await Order.find({
+          createdAt: { $gte: sixMonthsAgo },
+          deliveryTimestamp: { $ne: null },
+          dispatchTimestamp: { $ne: null },
+        }).exec();
+
+        let totalSalesByMonth = {};
+
+        _orders.forEach((order) => {
+          const createdAt = new Date(order.createdAt); // Convert timestamp to Date object
+          const orderMonth = createdAt.toLocaleString("default", {
+            month: "short",
+          });
+
+          const itemsTotalPrice = order.items.reduce((total, item) => {
+            const totalPrice = item?.salePrice * item?.quantity;
+            return total + totalPrice;
+          }, 0);
+          if (totalSalesByMonth[orderMonth]) {
+            totalSalesByMonth[orderMonth] += itemsTotalPrice;
+          } else {
+            totalSalesByMonth[orderMonth] = itemsTotalPrice;
+          }
+        });
+
+        let labels = [];
+        for (let i = 0; i < 6; i++) {
+          labels.unshift(
+            sixMonthsAgo.toLocaleString("default", { month: "short" })
+          );
+          sixMonthsAgo.setMonth(sixMonthsAgo.getMonth() + 1);
+        }
+
+        labels.reverse();
+
+        // Combine labels and total sales into an array of objects
+        let chartData = labels.map((label) => ({
+          label,
+          value: totalSalesByMonth[label] || 0,
+        }));
+
+        statPage["chartData"] = chartData;
+      });
+
+      return statPage;
     },
   },
 
@@ -271,6 +451,95 @@ const resolvers = {
         );
       }
 
+      return user;
+    },
+
+    checkout: async (_, args) => {
+      const { items, customer, payment, _deliveryLocation } = args;
+
+      let user;
+
+      let newOrder = new Order({
+        items: JSON.parse(items),
+        customer,
+        deliveryLocation: JSON.parse(_deliveryLocation),
+        payment: JSON.parse(payment),
+      });
+
+      newOrder
+        .save()
+        .then(async (order) => {
+          user = await User.findByIdAndUpdate(customer, { cart: [] });
+          return order;
+        })
+        .then(async (order) => {
+          let _products = [];
+          for (let item of order?.items) {
+            let product = await Product.findById(item.product);
+            _products.push({
+              image: product?.images[0],
+              name: product?.name,
+              price: item.salePrice,
+              variant: item.variant,
+              quantity: item.quantity,
+            });
+          }
+
+          await courier.send({
+            message: {
+              to: {
+                data: {
+                  name: user?.name,
+                },
+                email: user?.email,
+              },
+              template: "MJS23WZB08M4ZRG9KDNF675BM6HR",
+              data: {
+                customerName: user?.name,
+                orderNumber: order?.id,
+                products: _products,
+              },
+            },
+          });
+        });
+
+      return user;
+    },
+
+    updateOrder: async (_, args) => {
+      const { action, id } = args;
+
+      let order;
+
+      if (action == "dispatch") {
+        order = await Order.findById(id)
+          .then((doc) => {
+            doc.dispatchTimestamp = Date.now().toString();
+            doc.save();
+            return doc;
+          })
+          .catch((err) => {
+            console.log("Oh! Dark");
+          });
+      }
+
+      if (action == "deliver") {
+        order = await Order.findById(id)
+          .then((doc) => {
+            doc.deliveryTimestamp = Date.now().toString();
+            doc.save();
+            return doc;
+          })
+          .catch((err) => {
+            console.log("Oh! Dark");
+          });
+      }
+
+      return order;
+    },
+
+    updateAdmin: async (_, args) => {
+      let user = await Admin.findByIdAndUpdate(args?.id, omit(args, ["id"]));
       return user;
     },
   },

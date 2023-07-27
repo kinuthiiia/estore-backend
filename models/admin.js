@@ -10,6 +10,7 @@ export const AdminSchema = new Schema(
     name: String,
     phoneNumber: String,
     levelClearance: String,
+    removed: { type: Boolean, default: false },
   },
   {
     collection: "admins",
