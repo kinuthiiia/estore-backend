@@ -137,9 +137,10 @@ const resolvers = {
           orderWorths.push(orderWorth);
         }
 
-        statPage["totalSales"] = orderWorths.reduce(
-          (sum, orderWorth) => sum + orderWorth
-        );
+        statPage["totalSales"] =
+          orderWorths.length > 0
+            ? orderWorths.reduce((sum, orderWorth) => sum + orderWorth)
+            : 0;
 
         statPage["totalProducts"] = (await Product.find()).length;
 
