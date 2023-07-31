@@ -1,4 +1,11 @@
-import { Admin, User, Order, Product, Section } from "./models/index.js";
+import {
+  Admin,
+  User,
+  Order,
+  Product,
+  Section,
+  Transaction,
+} from "./models/index.js";
 import cloudinary from "cloudinary";
 import { CourierClient } from "@trycourier/courier";
 import dotenv from "dotenv";
@@ -87,12 +94,14 @@ const resolvers = {
     },
 
     getOrders: async (_, { customer }) => {
-      const orders = await Order.find({ customer });
+      const orders = await Order.find({ customer }).populate("payment");
       return orders;
     },
 
     getAllOrders: async (_, args) => {
-      const orders = await Order.find().populate("customer");
+      const orders = await Order.find()
+        .populate("customer")
+        .populate("payment");
       return orders;
     },
 
@@ -460,11 +469,14 @@ const resolvers = {
 
       let user;
 
+      let newTransaction = new Transaction(JSON.parse(payment));
+      let transaction = newTransaction.save();
+
       let newOrder = new Order({
         items: JSON.parse(items),
         customer,
         deliveryLocation: JSON.parse(_deliveryLocation),
-        payment: JSON.parse(payment),
+        payment: transaction?.id,
       });
 
       newOrder

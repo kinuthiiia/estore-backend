@@ -18,11 +18,7 @@ export const OrderSchema = new Schema(
       lat: Number,
       lng: Number,
     },
-    payment: {
-      code: String,
-      timestamp: String,
-      amount: Number,
-    },
+    payment: { type: Schema.Types.ObjectId, ref: "Transaction" },
     deliveryTimestamp: String,
     dispatchTimestamp: String,
     pickUpTimestamp: String,

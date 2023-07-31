@@ -66,11 +66,18 @@ type Order {
     items: [OrderItem]
     customer: User
     deliveryLocation: DeliveryLocation
-    payment: Payment
+    payment: Transaction
     createdAt: String
     deliveryTimestamp: String
     dispatchTimestamp: String
     pickUpTimestamp: String
+}
+
+type Transaction {
+    id: ID
+    code: String
+    timestamp: String
+    amount: Int   
 }
 
 type OrderItem {
@@ -85,11 +92,7 @@ type DeliveryLocation {
     lng: Float
 }
 
-type Payment {
-    code: String
-    timestamp: String 
-    amount: Int
-}
+
 
 type Review {
     name: String
