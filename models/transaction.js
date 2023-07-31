@@ -8,7 +8,8 @@ export const TransactionSchema = new Schema(
   {
     code: String,
     timestamp: String,
-    amount: String,
+    amount: Number,
+    phoneNumber: String,
   },
   {
     collection: "transactions",
@@ -29,6 +30,5 @@ export const Transaction = mongoose.model("Transaction", TransactionSchema);
 
 Transaction.SyncToAlgolia(); //Clears the Algolia index for this schema and synchronizes all documents to Algolia (based on the settings defined in your plugin settings)
 Transaction.SetAlgoliaSettings({
-  searchableAttributes: ["name", "category"], //Sets the settings for this schema, see [Algolia's Index settings parameters](https://www.algolia.com/doc/api-client/javascript/settings#set-settings) for more info.
-  attributesForFaceting: ["category"],
+  searchableAttributes: ["code", "amount", "phoneNumber"], //Sets the settings for this schema, see [Algolia's Index settings parameters](https://www.algolia.com/doc/api-client/javascript/settings#set-settings) for more info.
 });

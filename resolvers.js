@@ -470,7 +470,8 @@ const resolvers = {
       let user;
 
       let newTransaction = new Transaction(JSON.parse(payment));
-      let transaction = newTransaction.save();
+      let transaction = await newTransaction.save();
+      console.log(transaction);
 
       let newOrder = new Order({
         items: JSON.parse(items),

@@ -78,6 +78,8 @@ type Transaction {
     code: String
     timestamp: String
     amount: Int   
+    phoneNumber: String
+    createdAt: String
 }
 
 type OrderItem {
