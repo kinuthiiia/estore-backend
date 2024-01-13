@@ -5,6 +5,8 @@ const { Schema } = mongoose;
 
 export const OrderSchema = new Schema(
   {
+    status: String,
+    createdBy: { type: Schema.Types.ObjectId, ref: "Admin" },
     items: [
       {
         product: { type: Schema.Types.ObjectId, ref: "Product" },
@@ -13,15 +15,21 @@ export const OrderSchema = new Schema(
         variant: String,
       },
     ],
-    customer: { type: Schema.Types.ObjectId, ref: "User" },
-    deliveryLocation: {
-      lat: Number,
-      lng: Number,
+    customer: {
+      name: String,
+      phoneNumber: String,
     },
-    payment: { type: Schema.Types.ObjectId, ref: "Transaction" },
-    deliveryTimestamp: String,
-    dispatchTimestamp: String,
-    pickUpTimestamp: String,
+    delivery: {
+      toBeDelivered: Boolean,
+      deliveryStatus: String,
+      deliveryTimestamp: String,
+      location: String,
+      amount: Number,
+    },
+    payment: {
+      mode: String,
+      code: String,
+    },
   },
   {
     collection: "orders",
